@@ -7,6 +7,7 @@ export const PROOF_STATUS = {
   PENDING: 'pending',
   VERIFIED: 'verified',
   REJECTED: 'rejected',
+  EXPIRED: 'expired',
 };
 
 export const CREDENTIAL_STATUS = {
