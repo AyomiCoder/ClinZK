@@ -45,6 +45,8 @@ async function checkDatabaseConnection(
 ): Promise<void> {
   const logger = new Logger('Database');
   const dbUrl = configService.get<string>('database.url');
+  const nodeEnv = configService.get<string>('nodeEnv');
+  const isProduction = nodeEnv === 'production';
 
   if (!dbUrl) {
     logger.error('DATABASE_URL is not set');
@@ -55,6 +57,11 @@ async function checkDatabaseConnection(
     const dataSource = new DataSource({
       type: 'postgres',
       url: dbUrl,
+      ssl: isProduction
+        ? {
+            rejectUnauthorized: false,
+          }
+        : false,
     });
 
     await dataSource.initialize();
