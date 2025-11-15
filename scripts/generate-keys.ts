@@ -18,6 +18,13 @@ async function generateKeys() {
   if (existsSync(envPath)) {
     let envContent = readFileSync(envPath, 'utf-8');
     
+    if (!envContent.includes('ISSUER_PRIVATE_KEY=')) {
+      envContent += '\nISSUER_PRIVATE_KEY=\n';
+    }
+    if (!envContent.includes('ISSUER_PUBLIC_KEY=')) {
+      envContent += '\nISSUER_PUBLIC_KEY=\n';
+    }
+    
     envContent = envContent.replace(
       /ISSUER_PRIVATE_KEY=.*/,
       `ISSUER_PRIVATE_KEY=${privateKeyHex}`
@@ -30,7 +37,7 @@ async function generateKeys() {
     writeFileSync(envPath, envContent);
     console.log('\n✅ Keys have been written to .env file');
   } else {
-    console.log('\n⚠️  .env file not found. Please add these keys manually:');
+    console.log('\n⚠️  .env file not found. Please add these manually:');
     console.log(`ISSUER_PRIVATE_KEY=${privateKeyHex}`);
     console.log(`ISSUER_PUBLIC_KEY=${publicKeyHex}`);
   }
