@@ -5,6 +5,8 @@ import { config } from 'dotenv';
 config();
 
 const configService = new ConfigService();
+const nodeEnv = configService.get<string>('NODE_ENV');
+const isProduction = nodeEnv === 'production';
 
 export default new DataSource({
   type: 'postgres',
@@ -12,5 +14,10 @@ export default new DataSource({
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/database/migrations/*.js'],
   synchronize: false,
+  ssl: isProduction
+    ? {
+        rejectUnauthorized: false,
+      }
+    : false,
 });
 
