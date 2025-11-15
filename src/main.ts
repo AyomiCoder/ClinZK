@@ -10,7 +10,6 @@ async function validateEnv(configService: ConfigService): Promise<void> {
     'DATABASE_URL',
     'ISSUER_PRIVATE_KEY',
     'ISSUER_PUBLIC_KEY',
-    'ISSUER_DID',
   ];
 
   const missing: string[] = [];
