@@ -11,9 +11,9 @@ export const getDatabaseConfig = (
     type: 'postgres',
     url: configService.get<string>('database.url'),
     autoLoadEntities: true,
-    synchronize: false,
+    synchronize: true, // Auto-sync schema changes (use with caution in production)
     migrations: ['dist/database/migrations/*.js'],
-    migrationsRun: false,
+    migrationsRun: false, // We handle migrations manually via MigrationService
     logging: nodeEnv === 'development',
     logger: 'advanced-console',
     ssl: isProduction

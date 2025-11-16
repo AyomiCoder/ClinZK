@@ -196,6 +196,7 @@ export class ProofService {
 
     const verifiedAt = new Date();
     const primaryTrial = eligibleTrials[0];
+    const allEligibleTrialIds = eligibleTrials.map((trial) => trial.id);
 
     const proofEntity = this.proofRepository.create({
       proofHash: dto.proofHash,
@@ -203,6 +204,7 @@ export class ProofService {
       issuerDid: dto.issuerDID,
       credentialHash: dto.credentialHash,
       trialId: primaryTrial.id,
+      eligibleTrialIds: allEligibleTrialIds,
       status: PROOF_STATUS.VERIFIED,
       txHash: verificationResult.txHash,
       verifiedAt,
@@ -283,17 +285,68 @@ export class ProofService {
 
     const issuerName = issuer?.name || null;
 
+    // Fetch all unique trial IDs from all proofs
+    const allTrialIds = new Set<string>();
+    proofs.forEach((proof) => {
+      if (proof.eligibleTrialIds && proof.eligibleTrialIds.length > 0) {
+        proof.eligibleTrialIds.forEach((id) => allTrialIds.add(id));
+      } else if (proof.trialId) {
+        // Fallback for old proofs that only have trialId
+        allTrialIds.add(proof.trialId);
+      }
+    });
+
+    // Fetch trial details
+    const trials = allTrialIds.size > 0
+      ? await this.trialRepository.find({
+          where: Array.from(allTrialIds).map((id) => ({ id })),
+        })
+      : [];
+
+    const trialMap = new Map(trials.map((trial) => [trial.id, trial]));
+
     return {
       credentialStatus: credential.status,
       issuerName: issuerName,
-      proofs: proofs.map((proof) => ({
-        proofHash: proof.proofHash,
-        credentialHash: proof.credentialHash,
-        status: proof.status,
-        txHash: proof.txHash,
-        verifiedAt: proof.verifiedAt,
-        createdAt: proof.createdAt,
-      })),
+      proofs: proofs.map((proof) => {
+        const eligibleTrials = proof.eligibleTrialIds && proof.eligibleTrialIds.length > 0
+          ? proof.eligibleTrialIds
+              .map((trialId) => {
+                const trial = trialMap.get(trialId);
+                return trial
+                  ? {
+                      id: trial.id,
+                      codeName: trial.codeName,
+                      displayName: trial.displayName,
+                    }
+                  : null;
+              })
+              .filter((trial) => trial !== null)
+          : proof.trialId
+            ? (() => {
+                const trial = trialMap.get(proof.trialId);
+                return trial
+                  ? [
+                      {
+                        id: trial.id,
+                        codeName: trial.codeName,
+                        displayName: trial.displayName,
+                      },
+                    ]
+                  : [];
+              })()
+            : [];
+
+        return {
+          proofHash: proof.proofHash,
+          credentialHash: proof.credentialHash,
+          status: proof.status,
+          txHash: proof.txHash,
+          verifiedAt: proof.verifiedAt,
+          createdAt: proof.createdAt,
+          eligibleTrials: eligibleTrials,
+        };
+      }),
     };
   }
 

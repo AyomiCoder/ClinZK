@@ -31,6 +31,9 @@ export class Proof {
   @Column({ type: 'varchar', nullable: true })
   trialId: string | null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  eligibleTrialIds: string[] | null;
+
   @Column({
     type: 'enum',
     enum: PROOF_STATUS,

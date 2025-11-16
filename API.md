@@ -1267,7 +1267,19 @@ Get the complete proof submission history for a specific credential. Patients ca
       "status": "verified",
       "txHash": "0x3533343936656362613062323339393634363032326564663532633036306561",
       "verifiedAt": "2025-11-14T10:38:37.075Z",
-      "createdAt": "2025-11-14T10:38:37.080Z"
+      "createdAt": "2025-11-14T10:38:37.080Z",
+      "eligibleTrials": [
+        {
+          "id": "uuid-trial-1",
+          "codeName": "BLOOD_BANK",
+          "displayName": "Blood Bank Research Study"
+        },
+        {
+          "id": "uuid-trial-2",
+          "codeName": "DIABETES_STUDY",
+          "displayName": "Diabetes Treatment Trial"
+        }
+      ]
     },
     {
       "proofHash": "c247b9f1df8697a7046755ca2501b08feebf0da4b698802a4a7608e0e2407918",
@@ -1275,11 +1287,18 @@ Get the complete proof submission history for a specific credential. Patients ca
       "status": "rejected",
       "txHash": null,
       "verifiedAt": null,
-      "createdAt": "2025-11-14T10:40:44.462Z"
+      "createdAt": "2025-11-14T10:40:44.462Z",
+      "eligibleTrials": []
     }
   ]
 }
 ```
+
+**Note:**
+- `eligibleTrials` is an array containing all trials the proof was eligible for at the time of submission
+- For verified proofs, this will contain one or more trials
+- For rejected/expired proofs, this will be an empty array
+- Each trial object includes `id`, `codeName`, and `displayName`
 
 **Example Response - Revoked Credential:**
 ```json
@@ -1293,7 +1312,14 @@ Get the complete proof submission history for a specific credential. Patients ca
       "status": "verified",
       "txHash": "0x3533343936656362613062323339393634363032326564663532633036306561",
       "verifiedAt": "2025-11-14T10:38:37.075Z",
-      "createdAt": "2025-11-14T10:38:37.080Z"
+      "createdAt": "2025-11-14T10:38:37.080Z",
+      "eligibleTrials": [
+        {
+          "id": "uuid-trial-1",
+          "codeName": "BLOOD_BANK",
+          "displayName": "Blood Bank Research Study"
+        }
+      ]
     }
   ]
 }

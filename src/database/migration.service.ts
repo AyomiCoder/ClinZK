@@ -19,6 +19,11 @@ export class MigrationService implements OnModuleInit {
     try {
       this.logger.log('🔄 Running database migrations...');
       
+      // Ensure DataSource is initialized
+      if (!this.dataSource.isInitialized) {
+        await this.dataSource.initialize();
+      }
+
       const migrations = await this.dataSource.runMigrations({
         transaction: 'all',
       });
