@@ -11,7 +11,7 @@ export const getDatabaseConfig = (
     type: 'postgres',
     url: configService.get<string>('database.url'),
     autoLoadEntities: true,
-    synchronize: nodeEnv === 'development',
+    synchronize: false,
     migrations: ['dist/database/migrations/*.js'],
     migrationsRun: false,
     logging: nodeEnv === 'development',
