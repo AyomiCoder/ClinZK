@@ -36,9 +36,13 @@ export class IssueCredentialDto {
   @ArrayMinSize(1, { message: 'At least one condition is required' })
   conditions: string[];
 
-  @IsUUID()
-  @IsOptional()
-  issuerId?: string;
+  @IsString()
+  @IsNotEmpty()
+  issuerName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  issuerLoginId: string;
 
   @IsString()
   @IsNotEmpty()

@@ -4,9 +4,10 @@ import { IssuerController } from './issuer.controller';
 import { IssuerService } from './issuer.service';
 import { Credential } from './entities/credential.entity';
 import { Issuer } from './entities/issuer.entity';
+import { AdminModule } from '../admin/admin.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Credential, Issuer])],
+  imports: [TypeOrmModule.forFeature([Credential, Issuer]), AdminModule],
   controllers: [IssuerController],
   providers: [IssuerService],
   exports: [IssuerService],

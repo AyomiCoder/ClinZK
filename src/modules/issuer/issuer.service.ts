@@ -12,6 +12,7 @@ import { calculateAge } from './utils/validator.util';
 import { generateKeyPair } from './utils/key-generator.util';
 import { CREDENTIAL_STATUS } from '../../common/constants';
 import { CREDENTIAL_TYPES } from '../../common/constants';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class IssuerService {
@@ -21,6 +22,60 @@ export class IssuerService {
     @InjectRepository(Issuer)
     private issuerRepository: Repository<Issuer>,
   ) {}
+
+  private generateLoginId(clinicName: string): string {
+    const trimmedName = clinicName.trim();
+    const firstWord = trimmedName.split(/\s+/)[0].toUpperCase();
+    const randomSuffix = crypto.randomBytes(4).toString('hex').toUpperCase();
+    return `${firstWord}-${randomSuffix}`;
+  }
+
+  private async findIssuerWithSuggestions(issuerName: string): Promise<{
+    issuer: Issuer | null;
+    suggestions: string[];
+  }> {
+    const trimmedName = issuerName.trim();
+    const lowerName = trimmedName.toLowerCase();
+
+    const allIssuers = await this.issuerRepository.find({
+      where: { isActive: true },
+    });
+
+    const exactMatch = allIssuers.find(
+      (issuer) => issuer.name.toLowerCase() === lowerName,
+    );
+
+    if (exactMatch) {
+      return { issuer: exactMatch, suggestions: [] };
+    }
+
+    const inputWords = lowerName.split(/\s+/).filter((w) => w.length > 0);
+    const suggestions: Array<{ name: string; score: number }> = [];
+
+    for (const issuer of allIssuers) {
+      const issuerWords = issuer.name.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+      
+      for (const inputWord of inputWords) {
+        for (const issuerWord of issuerWords) {
+          if (issuerWord.includes(inputWord) || inputWord.includes(issuerWord)) {
+            const score = Math.min(inputWord.length, issuerWord.length) / Math.max(inputWord.length, issuerWord.length);
+            const existing = suggestions.find((s) => s.name === issuer.name);
+            if (existing) {
+              existing.score = Math.max(existing.score, score);
+            } else {
+              suggestions.push({ name: issuer.name, score });
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    suggestions.sort((a, b) => b.score - a.score);
+    const suggestionNames = suggestions.slice(0, 5).map((s) => s.name);
+
+    return { issuer: null, suggestions: suggestionNames };
+  }
 
   async getMetadata(issuerId?: string) {
     if (issuerId) {
@@ -117,9 +172,30 @@ export class IssuerService {
     }
 
     const did = dto.did || `did:clinic:${Date.now()}`;
+    
+    let loginId: string;
+    let loginIdExists = true;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (loginIdExists && attempts < maxAttempts) {
+      loginId = this.generateLoginId(dto.name);
+      const existing = await this.issuerRepository.findOne({
+        where: { loginId },
+      });
+      loginIdExists = !!existing;
+      attempts++;
+    }
+
+    if (loginIdExists) {
+      throw new BadRequestException(
+        'Failed to generate unique login ID. Please try again.',
+      );
+    }
 
     const issuer = this.issuerRepository.create({
       name: dto.name,
+      loginId: loginId!,
       did,
       publicKey: publicKey.toLowerCase(),
       privateKey: privateKey.toLowerCase(),
@@ -131,6 +207,7 @@ export class IssuerService {
     return {
       id: issuer.id,
       name: issuer.name,
+      loginId: issuer.loginId,
       did: issuer.did,
       publicKey: issuer.publicKey,
       isActive: issuer.isActive,
@@ -147,6 +224,7 @@ export class IssuerService {
     return issuers.map((issuer) => ({
       id: issuer.id,
       name: issuer.name,
+      loginId: issuer.loginId,
       did: issuer.did,
       publicKey: issuer.publicKey,
       isActive: issuer.isActive,
@@ -166,6 +244,44 @@ export class IssuerService {
     }));
   }
 
+  async verifyLoginId(issuerName: string, issuerLoginId: string) {
+    if (!issuerName || issuerName.trim() === '') {
+      throw new BadRequestException('Issuer name is required');
+    }
+
+    if (!issuerLoginId || issuerLoginId.trim() === '') {
+      throw new BadRequestException('Issuer login ID is required');
+    }
+
+    const { issuer, suggestions } = await this.findIssuerWithSuggestions(issuerName);
+
+    if (!issuer) {
+      let errorMessage = `Issuer with name "${issuerName}" not found or is not active.`;
+      if (suggestions.length > 0) {
+        errorMessage += ` Did you mean: ${suggestions.join(', ')}?`;
+      }
+      throw new NotFoundException(errorMessage);
+    }
+
+    if (!issuer.loginId) {
+      throw new BadRequestException(
+        'This clinic does not have a login ID assigned. Please contact your admin.',
+      );
+    }
+
+    if (issuer.loginId !== issuerLoginId.trim()) {
+      throw new BadRequestException(
+        'Invalid clinic login ID. The login ID does not match the clinic name. Please verify your credentials.',
+      );
+    }
+
+    return {
+      valid: true,
+      message: 'Login ID is valid',
+      issuerName: issuer.name,
+    };
+  }
+
   async getIssuerById(id: string) {
     const issuer = await this.issuerRepository.findOne({
       where: { id },
@@ -178,6 +294,7 @@ export class IssuerService {
     return {
       id: issuer.id,
       name: issuer.name,
+      loginId: issuer.loginId,
       did: issuer.did,
       publicKey: issuer.publicKey,
       isActive: issuer.isActive,
@@ -207,26 +324,34 @@ export class IssuerService {
       throw new BadRequestException('At least one condition is required');
     }
 
-    let issuer: Issuer | null = null;
+    if (!dto.issuerName || dto.issuerName.trim() === '') {
+      throw new BadRequestException('Issuer name is required');
+    }
 
-    if (dto.issuerId) {
-      issuer = await this.issuerRepository.findOne({
-        where: { id: dto.issuerId, isActive: true },
-      });
-      if (!issuer) {
-        throw new NotFoundException(`Issuer with ID ${dto.issuerId} not found`);
-      }
-    } else {
-      issuer = await this.issuerRepository.findOne({
-        where: { isActive: true },
-        order: { createdAt: 'ASC' },
-      });
+    if (!dto.issuerLoginId || dto.issuerLoginId.trim() === '') {
+      throw new BadRequestException('Issuer login ID is required for authentication');
+    }
 
-      if (!issuer) {
-        throw new BadRequestException(
-          'No active issuer found. Please register an issuer first using POST /issuer/register',
-        );
+    const { issuer, suggestions } = await this.findIssuerWithSuggestions(dto.issuerName);
+
+    if (!issuer) {
+      let errorMessage = `Issuer with name "${dto.issuerName}" not found or is not active.`;
+      if (suggestions.length > 0) {
+        errorMessage += ` Did you mean: ${suggestions.join(', ')}?`;
       }
+      throw new NotFoundException(errorMessage);
+    }
+
+    if (!issuer.loginId) {
+      throw new BadRequestException(
+        'This clinic does not have a login ID assigned. Please contact your admin.',
+      );
+    }
+
+    if (issuer.loginId !== dto.issuerLoginId.trim()) {
+      throw new BadRequestException(
+        'Invalid clinic login ID. The login ID does not match the clinic name. Please verify your credentials.',
+      );
     }
 
     const age = calculateAge(dto.dob);
@@ -305,8 +430,29 @@ export class IssuerService {
     };
   }
 
-  async getAllCredentials() {
+  async getAllCredentials(issuerName?: string) {
+    let issuer: Issuer | null = null;
+    
+    if (issuerName && issuerName.trim() !== '') {
+      const { issuer: foundIssuer, suggestions } = await this.findIssuerWithSuggestions(issuerName);
+
+      if (!foundIssuer) {
+        let errorMessage = `Issuer with name "${issuerName}" not found or is not active.`;
+        if (suggestions.length > 0) {
+          errorMessage += ` Did you mean: ${suggestions.join(', ')}?`;
+        }
+        throw new NotFoundException(errorMessage);
+      }
+
+      issuer = foundIssuer;
+    }
+
+    const whereCondition = issuer
+      ? { issuerId: issuer.id }
+      : {};
+
     const credentials = await this.credentialRepository.find({
+      where: whereCondition,
       order: { createdAt: 'DESC' },
     });
 
@@ -340,14 +486,14 @@ export class IssuerService {
   }
 
   async getCredentialsByIssuerAndPatientNumber(dto: RetrieveCredentialsDto) {
-    const issuer = await this.issuerRepository.findOne({
-      where: { name: dto.issuerName, isActive: true },
-    });
+    const { issuer, suggestions } = await this.findIssuerWithSuggestions(dto.issuerName);
 
     if (!issuer) {
-      throw new NotFoundException(
-        `Issuer with name "${dto.issuerName}" not found. Please check the issuer name and try again.`,
-      );
+      let errorMessage = `Issuer with name "${dto.issuerName}" not found. Please check the issuer name and try again.`;
+      if (suggestions.length > 0) {
+        errorMessage += ` Did you mean: ${suggestions.join(', ')}?`;
+      }
+      throw new NotFoundException(errorMessage);
     }
 
     const allCredentials = await this.credentialRepository.find({

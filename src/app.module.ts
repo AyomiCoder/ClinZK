@@ -11,6 +11,7 @@ import { HealthModule } from './modules/health/health.module';
 import { IssuerModule } from './modules/issuer/issuer.module';
 import { ProofModule } from './modules/proof/proof.module';
 import { TrialModule } from './modules/trial/trial.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TrialModule } from './modules/trial/trial.module';
       inject: [ConfigService],
     }),
     HealthModule,
+    AdminModule,
     IssuerModule,
     ProofModule,
     TrialModule,

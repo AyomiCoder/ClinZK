@@ -5,7 +5,143 @@
 http://localhost:4000
 ```
 
+## Admin Access
+
+Most admin endpoints require a 16-character access hash for authentication. Hashes are stored in the database and can be generated via API endpoint.
+
+**Generate Hash:** Call `POST /admin/generate-hash` (no authentication needed)
+
+**Hash can be provided in three ways:**
+1. **Header (Recommended):** `X-Admin-Hash: a1b2c3d4e5f6g7h8`
+2. **Query Parameter:** `?accessHash=a1b2c3d4e5f6g7h8`
+3. **Request Body:** `{ "accessHash": "a1b2c3d4e5f6g7h8", ... }`
+
+**Protected Endpoints:**
+- `POST /issuer/register` - Add issuer
+- `GET /issuer/list` - Get issuers
+- `GET /issuer/metadata` - Get metadata
+- `GET /issuer/:id` - Get issuer by ID
+- `POST /trial/create` - Create trial
+- `POST /trial/create-bulk` - Create trials bulk
+- `GET /trial/list` - Get trials
+- `GET /trial/names` - Get trial names
+- `GET /trial/:id` - Get trial by ID
+
+---
+
 ## Endpoints
+
+### Admin Endpoints
+
+#### POST /admin/generate-hash
+Generate a new 16-character admin access hash. The hash is stored in the database and can be used immediately.
+
+**Request Body (Optional):**
+```json
+{
+  "description": "Admin user 1"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "accessHash": "a1b2c3d4e5f6g7h8",
+  "id": "uuid-here",
+  "description": "Admin user 1",
+  "createdAt": "2025-11-16T14:00:00.000Z",
+  "message": "Save this hash securely. Use it to access admin endpoints."
+}
+```
+
+**Status Code:** `201 Created`
+
+**Note:** 
+- No authentication required to generate hashes
+- Multiple hashes can be generated
+- Each hash works independently
+- Save the hash securely - it cannot be retrieved later
+
+---
+
+#### POST /admin/verify-hash
+Verify if an admin access hash is valid and active.
+
+**Request Body:**
+```json
+{
+  "accessHash": "a1b2c3d4e5f6g7h8"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "valid": true,
+  "message": "Access hash is valid"
+}
+```
+
+**Error Response (200 OK - Invalid):**
+```json
+{
+  "valid": false,
+  "message": "Access hash is invalid"
+}
+```
+
+---
+
+#### GET /admin/hashes
+Get all generated admin access hashes. Requires admin access.
+
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8`
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": "uuid-1",
+    "hash": "a1b2c3d4e5f6g7h8",
+    "description": "Admin user 1",
+    "isActive": true,
+    "createdAt": "2025-11-16T14:00:00.000Z"
+  },
+  {
+    "id": "uuid-2",
+    "hash": "b2c3d4e5f6g7h8i9",
+    "description": null,
+    "isActive": true,
+    "createdAt": "2025-11-16T13:00:00.000Z"
+  }
+]
+```
+
+---
+
+#### DELETE /admin/hashes/:hash
+Deactivate an admin access hash. Requires admin access.
+
+**⚠️ Admin Access Required**
+
+**Path Parameters:**
+- `hash`: The 16-character access hash to deactivate
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8`
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Access hash deactivated successfully",
+  "hash": "a1b2c3d4e5f6g7h8"
+}
+```
+
+---
 
 ### Health Check
 
@@ -29,6 +165,11 @@ Check if the API is running.
 #### POST /issuer/register
 Register a new issuer. Automatically generates Ed25519 keypair.
 
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter or request body)
+
 **Request Body:**
 ```json
 {
@@ -46,12 +187,18 @@ Register a new issuer. Automatically generates Ed25519 keypair.
 {
   "id": "uuid-here",
   "name": "City General Hospital",
+  "loginId": "CITY-A1B2C3D4",
   "did": "did:clinic:002",
   "publicKey": "a1b2c3d4e5f6...",
   "isActive": true,
   "createdAt": "2025-11-13T21:10:26.000Z"
 }
 ```
+
+**Note:**
+- A unique `loginId` is automatically generated when creating an issuer
+- The login ID format: `{FIRST_WORD}-{RANDOM_8_CHARS}` (e.g., "CITY-A1B2C3D4" for "City General Hospital")
+- **Important:** Save the `loginId` and share it securely with the clinic - it's required for credential issuance
 
 **Error Response:**
 
@@ -69,12 +216,18 @@ Register a new issuer. Automatically generates Ed25519 keypair.
 #### GET /issuer/list
 Get all active issuers.
 
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
+
 **Response:**
 ```json
 [
   {
     "id": "uuid-1",
     "name": "City General Hospital",
+    "loginId": "CITY-A1B2C3D4",
     "did": "did:clinic:002",
     "publicKey": "a1b2c3d4e5f6...",
     "isActive": true,
@@ -83,6 +236,7 @@ Get all active issuers.
   {
     "id": "uuid-2",
     "name": "Regional Medical Center",
+    "loginId": "REGIONAL-X9Y8Z7W6",
     "did": "did:clinic:003",
     "publicKey": "f6e5d4c3b2a1...",
     "isActive": true,
@@ -116,8 +270,72 @@ Get all active issuer names and IDs. This is a simplified endpoint for frontend 
 
 ---
 
+#### POST /issuer/verify-login
+Verify clinic login ID before issuing credentials. This endpoint allows the frontend to validate the login ID immediately when the user enters it, providing instant feedback.
+
+**Request Body:**
+```json
+{
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4"
+}
+```
+
+**Validation Rules:**
+- `issuerName`: Required, must match an active issuer (case-insensitive matching with suggestions)
+- `issuerLoginId`: Required, must match the login ID assigned to the issuer
+
+**Success Response (200 OK):**
+```json
+{
+  "valid": true,
+  "message": "Login ID is valid",
+  "issuerName": "City General Hospital"
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request** - Invalid login ID:
+```json
+{
+  "statusCode": 400,
+  "message": "Invalid clinic login ID. The login ID does not match the clinic name. Please verify your credentials."
+}
+```
+
+**400 Bad Request** - No login ID assigned:
+```json
+{
+  "statusCode": 400,
+  "message": "This clinic does not have a login ID assigned. Please contact your admin."
+}
+```
+
+**404 Not Found** - Issuer not found:
+```json
+{
+  "statusCode": 404,
+  "message": "Issuer with name \"City General Hospital\" not found or is not active. Did you mean: City General Clinic?"
+}
+```
+
+**Status Code:** `200 OK` (on success), `400 Bad Request` (on validation error), `404 Not Found` (on issuer not found)
+
+**Note:** 
+- This endpoint is optional but recommended for better UX
+- It provides immediate feedback before the user submits the full credential issuance form
+- The same validation is also performed in `POST /issuer/issue`, so this endpoint is for pre-validation only
+
+---
+
 #### GET /issuer/:id
 Get issuer details by ID.
+
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
 
 **Path Parameters:**
 - `id`: UUID of the issuer
@@ -127,6 +345,7 @@ Get issuer details by ID.
 {
   "id": "uuid-here",
   "name": "City General Hospital",
+  "loginId": "CITY-A1B2C3D4",
   "did": "did:clinic:002",
   "publicKey": "a1b2c3d4e5f6...",
   "isActive": true,
@@ -150,6 +369,11 @@ Get issuer details by ID.
 
 #### GET /issuer/metadata
 Get issuer public information including public key and credential types.
+
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
 
 **Query Parameters:**
 - `issuerId` (optional): UUID of specific issuer. If not provided, returns all active issuers.
@@ -235,6 +459,8 @@ Get issuer public information including public key and credential types.
 #### POST /issuer/issue
 Issue a signed credential to a participant. No age restrictions - credentials can be issued to anyone, including children.
 
+**⚠️ Security:** Requires both `issuerName` and `issuerLoginId` to authenticate the clinic. The login ID is generated when the issuer is registered and must be shared securely with the clinic.
+
 **Request Body:**
 ```json
 {
@@ -244,7 +470,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "O+",
   "genotype": "AA",
   "conditions": ["Hypertension", "Diabetes"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-12345"
 }
 ```
@@ -262,7 +489,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "O-",
   "genotype": "AS",
   "conditions": ["Anemia"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-001"
 }
 ```
@@ -276,7 +504,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "A+",
   "genotype": "AA",
   "conditions": ["Diabetes"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-002"
 }
 ```
@@ -290,7 +519,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "B+",
   "genotype": "AA",
   "conditions": ["Hypertension"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-003"
 }
 ```
@@ -306,7 +536,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "A+",
   "genotype": "AA",
   "conditions": ["Diabetes"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-004"
 }
 ```
@@ -320,7 +551,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "O+",
   "genotype": "AA",
   "conditions": ["Arthritis"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-005"
 }
 ```
@@ -334,17 +566,20 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
   "bloodGroup": "B+",
   "genotype": "AC",
   "conditions": ["Asthma"],
-  "issuerId": "uuid-of-issuer",
+  "issuerName": "City General Hospital",
+  "issuerLoginId": "CITY-A1B2C3D4",
   "patientNumber": "PAT-006"
 }
 ```
 
 **Note:** 
-- `issuerId` is optional. If not provided, uses the first active issuer.
+- `issuerName` is **required** - must match the exact name of a registered and active issuer/clinic (case-insensitive matching with suggestions).
+- `issuerLoginId` is **required** - must match the login ID assigned to the issuer when it was registered. This authenticates that the requester is authorized to issue credentials for this clinic.
 - `patientNumber` is required - this is the unique patient identifier assigned by the clinic/issuer.
-- At least one issuer must be registered before issuing credentials. Use `POST /issuer/register` to create an issuer first.
+- The issuer must be registered and active before issuing credentials. Use `POST /issuer/register` to create an issuer first.
 - **No age restrictions** - credentials can be issued to anyone regardless of age
 - **Multiple conditions supported** - provide an array of medical conditions
+- If the issuer name doesn't exist or is not active, the request will fail with a 404 error
 
 **Validation Rules:**
 - `name`: Must be a non-empty string
@@ -353,6 +588,8 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
 - `bloodGroup`: Must be one of: "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
 - `genotype`: Must be one of: "AA", "AS", "SS", "AC", "SC", "CC"
 - `conditions`: **Required** - Must be a non-empty array with at least one condition string (e.g., ["Hypertension", "Diabetes", "Asthma"])
+- `issuerName`: **Required** - Must be a non-empty string matching the exact name of a registered and active issuer/clinic (case-insensitive matching with suggestions)
+- `issuerLoginId`: **Required** - Must match the login ID assigned to the issuer when it was registered (e.g., "CITY-A1B2C3D4"). This authenticates that the requester is authorized to issue credentials for this clinic.
 - `patientNumber`: Must be a non-empty string (unique identifier assigned by the clinic)
 
 **Success Response (201 Created):**
@@ -390,11 +627,20 @@ Issue a signed credential to a participant. No age restrictions - credentials ca
 
 **Error Responses:**
 
-**400 Bad Request** - No issuer available:
+**404 Not Found** - Issuer not found or not active:
+```json
+{
+  "statusCode": 404,
+  "message": "Issuer with name \"City General Hospital\" not found or is not active. Please check the clinic name and ensure the issuer is registered and active.",
+  "error": "Not Found"
+}
+```
+
+**400 Bad Request** - Missing issuer name:
 ```json
 {
   "statusCode": 400,
-  "message": "No active issuer found. Please register an issuer first using POST /issuer/register",
+  "message": "Issuer name is required",
   "error": "Bad Request"
 }
 ```
@@ -1080,6 +1326,11 @@ Get the complete proof submission history for a specific credential. Patients ca
 #### POST /trial/create
 Create a new clinical trial with specific eligibility requirements.
 
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter or request body)
+
 **Request Body:**
 ```json
 {
@@ -1141,6 +1392,11 @@ Create a new clinical trial with specific eligibility requirements.
 
 #### POST /trial/create-bulk
 Create multiple trials at once. Useful for setting up multiple trials in bulk.
+
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter or request body)
 
 **Request Body:**
 ```json
@@ -1270,6 +1526,11 @@ Create multiple trials at once. Useful for setting up multiple trials in bulk.
 #### GET /trial/list
 Get all active trials with their requirements.
 
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
+
 **Response:**
 ```json
 [
@@ -1310,6 +1571,11 @@ Get all active trials with their requirements.
 #### GET /trial/names
 Get all active trial names and IDs. Simplified endpoint for frontend dropdowns.
 
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
+
 **Response:**
 ```json
 [
@@ -1334,6 +1600,11 @@ Get all active trial names and IDs. Simplified endpoint for frontend dropdowns.
 
 #### GET /trial/:id
 Get specific trial details by ID.
+
+**⚠️ Admin Access Required**
+
+**Headers:**
+- `X-Admin-Hash: a1b2c3d4e5f6g7h8` (or use query parameter)
 
 **Path Parameters:**
 - `id`: UUID of the trial

@@ -15,6 +15,9 @@ export class Issuer {
   name: string;
 
   @Column({ type: 'varchar', unique: true })
+  loginId: string;
+
+  @Column({ type: 'varchar', unique: true })
   did: string;
 
   @Column({ type: 'text' })
