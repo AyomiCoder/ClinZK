@@ -1,98 +1,219 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ClinZK
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A privacy-preserving clinical trial eligibility verification system using Zero-Knowledge Proofs (ZK Proofs). ClinZK allows patients to prove their eligibility for clinical trials without revealing sensitive personal information.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **Zero-Knowledge Proofs**: Privacy-preserving credential verification
+- **Clinic Management**: Secure clinic registration with login IDs
+- **Credential Issuance**: Issue digital credentials to patients
+- **Trial Management**: Create and manage clinical trial eligibility requirements
+- **Proof Submission**: Submit and verify eligibility proofs
+- **Proof History**: Track all proof submissions for a credential
+- **Admin Access**: Secure admin system with database-managed access hashes
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Prerequisites
 
-## Project setup
+- **Node.js** (v18 or higher)
+- **PostgreSQL** (v12 or higher)
+- **npm** or **yarn**
+
+## Getting Started
+
+### 1. Clone the Repository
 
 ```bash
-$ npm install
+git clone <repository-url>
+cd ClinZK
 ```
 
-## Compile and run the project
+### 2. Install Dependencies
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### 3. Set Up Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+# Server Configuration
+PORT=4000
+NODE_ENV=development
+
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/clinzkdb
+
+# Issuer Keys (Optional - will be auto-generated if not provided)
+ISSUER_PRIVATE_KEY=your_private_key_here
+ISSUER_PUBLIC_KEY=your_public_key_here
+```
+
+### 4. Set Up PostgreSQL Database
+
+Create a PostgreSQL database:
 
 ```bash
-# unit tests
-$ npm run test
+# Using psql
+createdb clinzkdb
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Or using SQL
+psql -U postgres
+CREATE DATABASE clinzkdb;
 ```
 
-## Deployment
+### 5. Run Database Migrations
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Migrations run automatically on server startup. The application will:
+- Automatically sync entity schemas (`synchronize: true`)
+- Run any pending migrations via `MigrationService`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 6. Start the Development Server
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Development mode (with hot reload)
+npm run start:dev
+
+# Production mode
+npm run build
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The server will start on `http://localhost:4000` (or the port specified in your `.env` file).
 
-## Resources
+## API Documentation
 
-Check out a few resources that may come in handy when working with NestJS:
+Full API documentation is available in [API.md](./API.md).
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Quick Start Endpoints
 
-## Support
+- **Health Check**: `GET http://localhost:4000/health`
+- **Generate Admin Hash**: `POST http://localhost:4000/admin/generate-hash`
+- **Register Issuer**: `POST http://localhost:4000/issuer/register` (requires admin access)
+- **Issue Credential**: `POST http://localhost:4000/issuer/issue`
+- **Submit Proof**: `POST http://localhost:4000/proof/submit`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Project Structure
 
-## Stay in touch
+```
+ClinZK/
+├── src/
+│   ├── modules/
+│   │   ├── admin/          # Admin access management
+│   │   ├── health/         # Health check endpoints
+│   │   ├── issuer/         # Credential issuance
+│   │   ├── proof/           # Proof generation and verification
+│   │   └── trial/           # Trial management
+│   ├── database/
+│   │   ├── migrations/     # Database migrations
+│   │   └── migration.service.ts
+│   ├── config/             # Configuration files
+│   └── common/             # Shared constants
+├── API.md                   # Complete API documentation
+└── package.json
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Key Features Explained
+
+### Automatic Database Sync
+
+The application automatically:
+- Syncs entity schemas on startup (`synchronize: true`)
+- Runs pending migrations via `MigrationService`
+- No manual migration commands needed
+
+### Clinic Login ID System
+
+- Each clinic gets a unique login ID when registered (e.g., `CITY-A1B2C3D4`)
+- Login ID is required for credential issuance
+- Prevents unauthorized credential issuance
+
+### Proof History
+
+- View all proof submissions for a credential
+- Includes eligible trials for each proof
+- Shows credential status (active, revoked, expired)
+
+## Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run start:dev          # Start with hot reload
+
+# Building
+npm run build              # Build for production
+
+# Testing
+npm run test               # Run unit tests
+npm run test:e2e           # Run e2e tests
+npm run test:cov           # Test coverage
+
+# Code Quality
+npm run lint               # Run ESLint
+npm run format              # Format code with Prettier
+```
+
+## Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `PORT` | Server port | No | `4000` |
+| `NODE_ENV` | Environment (development/production) | No | `development` |
+| `DATABASE_URL` | PostgreSQL connection string | **Yes** | - |
+| `ISSUER_PRIVATE_KEY` | Ed25519 private key (hex) | No | Auto-generated |
+| `ISSUER_PUBLIC_KEY` | Ed25519 public key (hex) | No | Auto-generated |
+
+## Database
+
+The application uses PostgreSQL with TypeORM. Key tables:
+
+- `issuers` - Clinic/issuer information
+- `credentials` - Patient credentials
+- `proofs` - Proof submissions
+- `trials` - Clinical trial definitions
+- `admin_hashes` - Admin access hashes
+
+## Troubleshooting
+
+### Database Connection Issues
+
+```bash
+# Check if PostgreSQL is running
+pg_isready
+
+# Test connection
+psql -U username -d clinzkdb
+```
+
+### Migration Issues
+
+Migrations run automatically on startup. If you encounter issues:
+
+1. Check database connection
+2. Verify `DATABASE_URL` in `.env`
+3. Check application logs for migration errors
+
+### Port Already in Use
+
+```bash
+# Change PORT in .env file
+PORT=4001
+```
+
+## Production Deployment
+
+1. Set `NODE_ENV=production` in your environment
+2. Ensure `DATABASE_URL` points to production database
+3. Build the application: `npm run build`
+4. Start with: `npm run start:prod`
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED
+
+## Support
+
+For API documentation, see [API.md](./API.md).
