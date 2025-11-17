@@ -1,135 +1,213 @@
-# ClinZK Monorepo
+# ClinZK
 
-This is a monorepo containing both the client and server applications for ClinZK.
+A privacy-preserving clinical trial eligibility verification system using Zero-Knowledge Proofs (ZK Proofs). ClinZK allows patients to prove their eligibility for clinical trials without revealing sensitive personal information.
 
-## Structure
+## Features
 
+- **Zero-Knowledge Proofs**: Privacy-preserving credential verification
+- **Clinic Management**: Secure clinic registration with login IDs
+- **Credential Issuance**: Issue digital credentials to patients
+- **Trial Management**: Create and manage clinical trial eligibility requirements
+- **Proof Submission**: Submit and verify eligibility proofs
+- **Proof History**: Track all proof submissions for a credential
+- **Admin Access**: Secure admin system with database-managed access hashes
+
+## Prerequisites
+
+- **Node.js** (v18 or higher)
+- **PostgreSQL** (v12 or higher)
+- **npm** or **yarn**
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd ClinZK
 ```
-.
-├── client/          # React frontend application
-├── server/          # NestJS backend application
-└── package.json     # Root package.json with workspace configuration
-```
 
-## Setup
+### 2. Install Dependencies
 
-1. Install all dependencies (from root):
 ```bash
 npm install
 ```
 
-This will install dependencies for both client and server workspaces.
+### 3. Set Up Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+# Server Configuration
+PORT=4000
+NODE_ENV=development
+
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/clinzkdb
+```
+
+### 4. Set Up PostgreSQL Database
+
+Create a PostgreSQL database:
+
+```bash
+# Using psql
+createdb clinzkdb
+
+# Or using SQL
+psql -U postgres
+CREATE DATABASE clinzkdb;
+```
+
+### 5. Run Database Migrations
+
+Migrations run automatically on server startup. The application will:
+- Automatically sync entity schemas (`synchronize: true`)
+- Run any pending migrations via `MigrationService`
+
+### 6. Start the Development Server
+
+```bash
+# Development mode (with hot reload)
+npm run start:dev
+
+# Production mode
+npm run build
+npm run start:prod
+```
+
+The server will start on `http://localhost:4000` (or the port specified in your `.env` file).
+
+## API Documentation
+
+Full API documentation is available in [API.md](./API.md).
+
+### Quick Start Endpoints
+
+- **Health Check**: `GET http://localhost:4000/health`
+- **Generate Admin Hash**: `POST http://localhost:4000/admin/generate-hash`
+- **Register Issuer**: `POST http://localhost:4000/issuer/register` (requires admin access)
+- **Issue Credential**: `POST http://localhost:4000/issuer/issue`
+- **Submit Proof**: `POST http://localhost:4000/proof/submit`
+
+## Project Structure
+
+```
+ClinZK/
+├── src/
+│   ├── modules/
+│   │   ├── admin/          # Admin access management
+│   │   ├── health/         # Health check endpoints
+│   │   ├── issuer/         # Credential issuance
+│   │   ├── proof/           # Proof generation and verification
+│   │   └── trial/           # Trial management
+│   ├── database/
+│   │   ├── migrations/     # Database migrations
+│   │   └── migration.service.ts
+│   ├── config/             # Configuration files
+│   └── common/             # Shared constants
+├── API.md                   # Complete API documentation
+└── package.json
+```
+
+## Key Features Explained
+
+### Automatic Database Sync
+
+The application automatically:
+- Syncs entity schemas on startup (`synchronize: true`)
+- Runs pending migrations via `MigrationService`
+- No manual migration commands needed
+
+### Clinic Login ID System
+
+- Each clinic gets a unique login ID when registered (e.g., `CITY-A1B2C3D4`)
+- Login ID is required for credential issuance
+- Prevents unauthorized credential issuance
+
+### Proof History
+
+- View all proof submissions for a credential
+- Includes eligible trials for each proof
+- Shows credential status (active, revoked, expired)
 
 ## Development
 
-### Client
+### Available Scripts
+
 ```bash
-# Run client in development mode
-npm run dev:client
-# or
-npm run dev --workspace=client
+# Development
+npm run start:dev          # Start with hot reload
+
+# Building
+npm run build              # Build for production
+
+# Testing
+npm run test               # Run unit tests
+npm run test:e2e           # Run e2e tests
+npm run test:cov           # Test coverage
+
+# Code Quality
+npm run lint               # Run ESLint
+npm run format              # Format code with Prettier
 ```
 
-### Server
+## Environment Variables
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `PORT` | Server port | No | `4000` |
+| `NODE_ENV` | Environment (development/production) | No | `development` |
+| `DATABASE_URL` | PostgreSQL connection string | **Yes** | - |
+
+## Database
+
+The application uses PostgreSQL with TypeORM. Key tables:
+
+- `issuers` - Clinic/issuer information
+- `credentials` - Patient credentials
+- `proofs` - Proof submissions
+- `trials` - Clinical trial definitions
+- `admin_hashes` - Admin access hashes
+
+## Troubleshooting
+
+### Database Connection Issues
+
 ```bash
-# Run server in development mode (with watch)
-npm run start:server:dev
-# or
-npm run start:dev --workspace=server
+# Check if PostgreSQL is running
+pg_isready
+
+# Test connection
+psql -U username -d clinzkdb
 ```
 
-## Building
+### Migration Issues
 
-### Build Server
+Migrations run automatically on startup. If you encounter issues:
+
+1. Check database connection
+2. Verify `DATABASE_URL` in `.env`
+3. Check application logs for migration errors
+
+### Port Already in Use
+
 ```bash
-# Build the server
-npm run build:server
-# or
-npm run build --workspace=server
+# Change PORT in .env file
+PORT=4001
 ```
 
-### Build Client
-```bash
-# Build the client
-npm run build:client
-# or
-npm run build --workspace=client
-```
+## Production Deployment
 
-### Build Both
-```bash
-# Build both client and server
-npm run build
-```
+1. Set `NODE_ENV=production` in your environment
+2. Ensure `DATABASE_URL` points to production database
+3. Build the application: `npm run build`
+4. Start with: `npm run start:prod`
 
-## Production / Deployment
+## License
 
-### Build and Start Server (Production)
-```bash
-# 1. Build the server
-npm run build:server
-# or
-npm run build --workspace=server
+UNLICENSED
 
-# 2. Start the server in production mode
-npm run start:server
-# or
-npm run start:prod --workspace=server
-```
+## Support
 
-### Build and Start Client (Production)
-```bash
-# 1. Build the client (creates static files in client/dist/)
-npm run build:client
-# or
-npm run build --workspace=client
-
-# 2. Start the client preview server (for testing production build)
-npm run start:client
-# or
-npm run preview --workspace=client
-```
-
-**Note:** 
-- For the server, make sure to build first using `npm run build:server` before starting in production mode.
-- For the client, the build creates static files in `client/dist/`. The `start:client` command uses Vite's preview server for testing. In actual production deployments, you would typically serve the `client/dist/` folder using a static file server like nginx, or deploy to platforms like Vercel, Netlify, etc.
-
-## Available Commands
-
-### Root Level Commands
-- `npm install` - Install all dependencies for all workspaces
-- `npm run build` - Build both client and server
-- `npm run build:client` - Build only the client
-- `npm run build:server` - Build only the server
-- `npm run start:server` - Start server in production mode
-- `npm run start:server:dev` - Start server in development mode
-- `npm run start:client` - Start client preview server (for production build)
-- `npm run dev:client` - Start client in development mode
-- `npm run lint` - Lint both client and server
-
-### Server Workspace Commands
-Run from root with `--workspace=server` or `-w server`:
-- `npm run build -w server` - Build server
-- `npm run start:prod -w server` - Start server in production
-- `npm run start:dev -w server` - Start server in development
-- `npm run start:debug -w server` - Start server in debug mode
-- `npm run test -w server` - Run server tests
-- `npm run lint -w server` - Lint server code
-
-### Client Workspace Commands
-Run from root with `--workspace=client` or `-w client`:
-- `npm run build -w client` - Build client (outputs to `client/dist/`)
-- `npm run dev -w client` - Start client in development mode
-- `npm run preview -w client` - Preview production build (serves `client/dist/`)
-- `npm run lint -w client` - Lint client code
-
-## Important Notes
-
-1. **Dependencies**: All dependencies are managed at the root level. Run `npm install` from the root directory.
-
-2. **Server Build**: The server build command is now simply `nest build` (dependencies are installed at root level).
-
-3. **Server Start (Production)**: After building, use `npm run start:server` or `npm run start:prod -w server` to start the production server.
-
-4. **Workspace Syntax**: You can use either `--workspace=<name>` or the shorter `-w <name>` flag when running commands.
-
+For API documentation, see [API.md](./API.md).
