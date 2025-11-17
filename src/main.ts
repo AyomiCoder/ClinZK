@@ -8,8 +8,6 @@ async function validateEnv(configService: ConfigService): Promise<void> {
   const logger = new Logger('Environment');
   const requiredVars = [
     'DATABASE_URL',
-    'ISSUER_PRIVATE_KEY',
-    'ISSUER_PUBLIC_KEY',
   ];
 
   const missing: string[] = [];

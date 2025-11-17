@@ -44,10 +44,6 @@ NODE_ENV=development
 
 # Database Configuration
 DATABASE_URL=postgresql://username:password@localhost:5432/clinzkdb
-
-# Issuer Keys (Optional - will be auto-generated if not provided)
-ISSUER_PRIVATE_KEY=your_private_key_here
-ISSUER_PUBLIC_KEY=your_public_key_here
 ```
 
 ### 4. Set Up PostgreSQL Database
@@ -163,8 +159,6 @@ npm run format              # Format code with Prettier
 | `PORT` | Server port | No | `4000` |
 | `NODE_ENV` | Environment (development/production) | No | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | **Yes** | - |
-| `ISSUER_PRIVATE_KEY` | Ed25519 private key (hex) | No | Auto-generated |
-| `ISSUER_PUBLIC_KEY` | Ed25519 public key (hex) | No | Auto-generated |
 
 ## Database
 
